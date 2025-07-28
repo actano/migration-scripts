@@ -186,7 +186,7 @@ async function checkNonRplanPeerDepsForReact17Prompt() {
     }
   }
   if (issues.length > 0) {
-    log.warn('The following package(s) require a new version that supports React 18. This is a warning only; please upgrade to a suitable version as soon as possible.')
+    log.warn('The following package(s) need to be updated to a version that supports React 18. Please upgrade them in the next step to ensure compatibility.')
     issues.forEach(({ name, peer, required }) => {
       log.warn(`  ${name}: peerDependency ${peer}@${required}`)
     })
