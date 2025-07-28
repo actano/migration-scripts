@@ -186,11 +186,10 @@ async function checkNonRplanPeerDepsForReact17Prompt() {
     }
   }
   if (issues.length > 0) {
-    log.warn('⚠️  Some dependencies (except @rplan/*) still require React 17/react-dom/@testing-library/react and may cause peer dependency issues:')
+    log.warn('The following package(s) require a new version that supports React 18. This is a warning only; please upgrade to a suitable version as soon as possible.')
     issues.forEach(({ name, peer, required }) => {
       log.warn(`  ${name}: peerDependency ${peer}@${required}`)
     })
-    log.warn('You should upgrade or replace these libraries.')
     const cont = await promptContinue()
     if (!cont) {
       log.error('Aborting migration due to incompatible peer dependencies.')
