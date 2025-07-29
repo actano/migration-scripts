@@ -9,7 +9,7 @@ const readline = require('readline')
 const TARGET_VERSIONS = {
   react: '^18.3.1',
   'react-dom': '^18.3.1',
-  '@testing-library/react': '^14.0.0',
+  '@testing-library/react': '^14.3.1',
   'react-test-renderer': '^18.3.1',
 }
 
