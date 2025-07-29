@@ -66,6 +66,17 @@ function savePackageJson(file, data) {
   log.success('package.json updated.')
 }
 
+async function fetchPackageInfo(name, version) {
+  try {
+    const { execSync } = require('child_process')
+    const output = execSync(`npm view ${name}@${version} --json`, { encoding: 'utf8' })
+    return JSON.parse(output)
+  } catch (error) {
+    log.warn(`Failed to fetch package info for ${name}@${version}`)
+    return null
+  }
+}
+
 function updateDeps(deps, name, version) {
   if (deps && deps[name]) {
     deps[name] = version
@@ -106,16 +117,22 @@ function syncRplanPeerDepsToInstalled() {
   savePackageJson(file, pkg)
 }
 
-async function checkRplanPeerDepsForReact17Prompt() {
+async function checkRplanPeerDepsFromRegistry() {
   const pkg = loadPackageJson().data
   const rplanDeps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
     .filter(name => name.startsWith('@rplan/'))
   const issues = []
+  
+  log.info('Checking @rplan/* packages from npm registry for React 18 compatibility...')
+  
   for (const dep of rplanDeps) {
     try {
-      const depPath = path.join('node_modules', dep, 'package.json')
-      if (!fs.existsSync(depPath)) continue
-      const depPkg = JSON.parse(fs.readFileSync(depPath, 'utf8'))
+      const version = pkg.dependencies[dep] || pkg.devDependencies[dep]
+      log.info(`Checking ${dep}@${version}...`)
+      
+      const depPkg = await fetchPackageInfo(dep, version)
+      if (!depPkg) continue
+      
       const peer = depPkg.peerDependencies || {}
       for (const key of ['react', 'react-dom']) {
         if (peer[key]) {
@@ -124,18 +141,20 @@ async function checkRplanPeerDepsForReact17Prompt() {
               name: dep,
               peer: key,
               required: peer[key],
+              version: version,
             })
           }
         }
       }
-    } catch {
-      log.warn(`Could not check peerDependencies for ${dep}`)
+    } catch (error) {
+      log.warn(`Could not check peerDependencies for ${dep}: ${error.message}`)
     }
   }
+  
   if (issues.length > 0) {
     log.warn('Some @rplan/* packages still require React 17 and may cause peer dependency issues:')
-    issues.forEach(({ name, peer, required }) => {
-      log.warn(`  ${name}: peerDependency ${peer}@${required}`)
+    issues.forEach(({ name, peer, required, version }) => {
+      log.warn(`  ${name}@${version}: peerDependency ${peer}@${required}`)
     })
     const cont = await promptContinue()
     if (!cont) {
@@ -149,12 +168,15 @@ async function checkRplanPeerDepsForReact17Prompt() {
   }
 }
 
-async function checkNonRplanPeerDepsForReact17Prompt() {
+async function checkNonRplanPeerDepsFromRegistry() {
   const pkg = loadPackageJson().data
   const core = ['react', 'react-dom', '@testing-library/react']
   const allDeps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
     .filter(name => !name.startsWith('@rplan/') && !core.includes(name))
   const issues = []
+  
+  log.info('Checking non-@rplan packages from npm registry for React 18 compatibility...')
+  
   for (const dep of allDeps) {
     // Skip if in ignore list and version is >= 18
     if (
@@ -166,10 +188,14 @@ async function checkNonRplanPeerDepsForReact17Prompt() {
     ) {
       continue
     }
+    
     try {
-      const depPath = path.join('node_modules', dep, 'package.json')
-      if (!fs.existsSync(depPath)) continue
-      const depPkg = JSON.parse(fs.readFileSync(depPath, 'utf8'))
+      const version = pkg.dependencies[dep] || pkg.devDependencies[dep]
+      log.info(`Checking ${dep}@${version}...`)
+      
+      const depPkg = await fetchPackageInfo(dep, version)
+      if (!depPkg) continue
+      
       const peer = depPkg.peerDependencies || {}
       for (const key of core) {
         if (peer[key]) {
@@ -178,18 +204,20 @@ async function checkNonRplanPeerDepsForReact17Prompt() {
               name: dep,
               peer: key,
               required: peer[key],
+              version: version,
             })
           }
         }
       }
-    } catch {
-      log.warn(`Could not check peerDependencies for ${dep}`)
+    } catch (error) {
+      log.warn(`Could not check peerDependencies for ${dep}: ${error.message}`)
     }
   }
+  
   if (issues.length > 0) {
     log.warn('The following package(s) need to be updated to a version that supports React 18. Please upgrade them in the next step to ensure compatibility.')
-    issues.forEach(({ name, peer, required }) => {
-      log.warn(`  ${name}: peerDependency ${peer}@${required}`)
+    issues.forEach(({ name, peer, required, version }) => {
+      log.warn(`  ${name}@${version}: peerDependency ${peer}@${required}`)
     })
     const cont = await promptContinue()
     if (!cont) {
@@ -246,9 +274,9 @@ async function migrate() {
   stepBox('Sync @rplan/* peerDependencies to installed versions')
   syncRplanPeerDepsToInstalled()
   stepBox('Check @rplan/* peerDependencies for React 17')
-  await checkRplanPeerDepsForReact17Prompt()
+  await checkRplanPeerDepsFromRegistry()
   stepBox('Check non-@rplan peerDependencies for React 17')
-  await checkNonRplanPeerDepsForReact17Prompt()
+  await checkNonRplanPeerDepsFromRegistry()
   stepBox('Install dependencies (npm install)')
   log.info('Running npm install...')
   try {
