@@ -7,10 +7,10 @@ const readline = require('readline')
 
 // === Version config ===
 const TARGET_VERSIONS = {
-  react: '^18.0.0',
-  'react-dom': '^18.0.0',
+  react: '^18.3.1',
+  'react-dom': '^18.3.1',
   '@testing-library/react': '^14.0.0',
-  'react-test-renderer': '^18.0.0',
+  'react-test-renderer': '^18.3.1',
 }
 
 // === Terminal colors ===
