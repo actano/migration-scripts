@@ -251,7 +251,7 @@ async function migrate() {
   stepBox('Install dependencies (npm install)')
   log.info('Running npm install...')
   try {
-    execSync('npm install --legacy-peer-deps', { stdio: 'inherit' })
+    execSync('npm install', { stdio: 'inherit' })
     stepBox('Migration Complete')
     printMigrationSuccess()
   } catch {
