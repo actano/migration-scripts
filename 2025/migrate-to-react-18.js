@@ -12,7 +12,8 @@ const TARGET_VERSIONS = {
   '@testing-library/react': '^14.3.1',
   'react-test-renderer': '^18.3.1',
   '@testing-library/jest-dom': '^6.6.4',
-  '@types/react': '^18.3.12'
+  '@types/react': '^18.3.12',
+  '@types/react-dom': '^18.3.1'
 }
 
 // === Terminal colors ===
